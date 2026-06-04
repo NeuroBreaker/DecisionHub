@@ -1,0 +1,51 @@
+from sqlalchemy.sql.functions import grouping_sets
+from sqlalchemy import ARRAY, Text
+from sqlalchemy import BigInteger, ForeignKey, Nullable, String, LargeBinary
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.sql.operators import match_op
+
+
+
+DATABASE_URL = ""
+
+engine = create_async_engine(DATABASE_URL, echo=True)
+AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
+
+
+
+#DeclarativeBase in Alchemy 2.0+ is abc class, so we cant use it directly
+class Base(DeclarativeBase):
+    pass
+
+class Members(Base):
+    __tablename__ = "members"
+
+    db_id:            Mapped [int] = mapped_column(primary_key=True, autoincrement=True)
+    fio:              Mapped [str] = mapped_column(nullable=False)
+    group_name:       Mapped [str] = mapped_column(nullable=False)
+    github_link:      Mapped [str] = mapped_column(nullable=False)
+    present:          Mapped [bytes] = mapped_column(LargeBinary)
+
+
+class Admins(Base):
+    __tablename__ = "admins"
+
+    db_id:            Mapped [int] = mapped_column(primary_key=True, autoincrement=True)
+    fio:              Mapped [str] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(nullable=False)
+
+
+class Jury(Base):
+    __tablename__ = "Jury"
+    db_id:            Mapped [int] = mapped_column(primary_key=True, autoincrement=True)
+    fio:              Mapped [str] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(nullable=False)
+
+
+class Group(Base):
+    __tablename__ = "groups"
+
+    db_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    group_name:       Mapped [str] = mapped_column(nullable=False)
+    group_score: Mapped[int | None] = mapped_column(nullable=True)
