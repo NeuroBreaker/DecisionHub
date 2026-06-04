@@ -15,7 +15,7 @@ npm run build
 **Backend**
 Запуск из DecisionHub/backend
 ```
-uv run main.py
+uv run src/main.py
 ```
 
 **PostgreSQL**
