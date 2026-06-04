@@ -1,13 +1,12 @@
-// src/pages/Jury/JuryPanel.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider'; // Ползунок для оценок
+import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function JuryPanel() {
   const [scores, setScores] = useState({ mvp: 0, ui: 0, innovation: 0 });
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState<string>('');
 
   // Имитация данных команды (пришли с бэкенда)
   const teamData = {
@@ -72,7 +71,7 @@ export default function JuryPanel() {
               </label>
               <Slider 
                 max={10} step={1} 
-                onValueChange={(val) => setScores({...scores, ui: val[0]})} 
+                onValueChange={(val: number[]) => setScores({...scores, ui: val[0]})} 
               />
             </div>
 
@@ -84,7 +83,7 @@ export default function JuryPanel() {
               </label>
               <Slider 
                 max={10} step={1} 
-                onValueChange={(val) => setScores({...scores, innovation: val[0]})} 
+                onValueChange={(val: number[]) => setScores({...scores, innovation: val[0]})} 
               />
             </div>
 
@@ -95,7 +94,7 @@ export default function JuryPanel() {
                 placeholder="Сильные/слабые стороны..." 
                 rows={4}
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setComment(e.target.value)}
               />
             </div>
 
