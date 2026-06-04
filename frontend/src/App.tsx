@@ -3,7 +3,7 @@ import { useAuthStore } from './store/authStore';
 import ParticipantDashboard from './pages/Participant/Dashboard';
 import JuryPanel from './pages/Jury/JuryPanel';
 import OrganizerBoard from './pages/Organizer/Leaderboard';
-import Login from './pages/Login';
+import Login from './pages/Auth/Login';
 
 function App() {
   const { user, isAuthenticated } = useAuthStore();
