@@ -14,6 +14,7 @@ dependencies = [
     "asyncpg>=0.31.0",
     "detect-secrets>=1.5.0",
     "dotenv>=0.9.9",
+    "fastapi>=0.136.3",
     "flake8>=7.3.0",
     "gitpython>=3.1.50",
     "loguru>=0.7.3",
