@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-
 from loguru import logger
 
 CURRENT_FILE_PATH = Path(__file__).resolve()

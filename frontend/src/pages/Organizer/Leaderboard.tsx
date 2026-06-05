@@ -62,15 +62,12 @@ export default function OrganizerBoard() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'CHECKED' | 'PENDING'>('ALL');
 
-  // Состояние для хранения реальных данных и статуса загрузки
   const [data, setData] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Загрузка реальных данных с бэкенда
   useEffect(() => {
     leaderboardApi.get()
     .then((res) => {
-      // Убеждаемся, что пришел массив, иначе ставим пустой
       setData(Array.isArray(res) ? res : []);
     })
     .catch((err) => {
