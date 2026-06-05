@@ -23,6 +23,12 @@ import tempfile
 import typing
 import yt_dlp
 
+import io
+import re
+import urllib.request
+import zipfile
+
+
 class Analyzer(abc.ABC):
     @staticmethod
     async def analyze(*args, **kwargs) -> typing.Any:
@@ -237,7 +243,7 @@ async def doc_video_analytic(url: str, words_list: list) -> dict:
             "summary": summary,
             "keywords_status": keywords_status,
             "is_valid": is_valid,
-            "score": 100 if is_valid else 40
+            "score": 10 if is_valid else 4
         }
 
     except Exception as e:
@@ -247,3 +253,6 @@ async def doc_video_analytic(url: str, words_list: list) -> dict:
             "error": str(e),
             "score": 0
         }
+
+
+

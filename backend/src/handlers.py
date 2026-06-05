@@ -6,7 +6,7 @@ from loguru import logger
 from database import PostgrePrepare, Postgrepool
 from fastapi import Body
 from service import Member_registration_service, Member_login_service, Present_analytic, Doc_analytic, Video_analytic
-
+from service import doc_git_analytic
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -101,9 +101,22 @@ def get_lead():
 
 #==============
 
+
+class GitRequest(BaseModel):
+    url: str
+
 @app.post("/api/artifacts/repo")
-def post_arti():
-    logger.info('/api/art/repo POST')
+async def post_arti(data: dict):  # Принимает любой JSON-словарь
+    # Пробуем вытащить ссылку по любому из трех ключей
+    logger.info(f'DATA IS {data}')
+    url = data.get("repoLink") or data.get("git") or data.get("link")
+    logger.info(f'URL IS {url}')
+    
+    result = await doc_git_analytic(url, ['readme', 'setup'])#type:ignore
+    logger.info(f'/api/art/repo POST WITH {result}')
+    return result
+
+
 
 
 @app.post("/api/artifacts/documentation")
