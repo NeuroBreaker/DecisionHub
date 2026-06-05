@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/store/authStore';
-import { artifactsApi, teamsApi } from '@/services/api';
+import { artifactsApi } from '@/services/api';
 import type { Artifacts } from '@/types';
 
 export default function ParticipantDashboard() {
