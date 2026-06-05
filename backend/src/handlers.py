@@ -9,7 +9,7 @@ from service import Member_registration_service, Member_login_service, Present_a
 from service import doc_git_analytic
 from database import TableCRUD, AsyncSessionLocal
 from sqlalchemy import text
-
+from typing import Optional
 
 
 @asynccontextmanager
@@ -36,10 +36,14 @@ async def register(
     name: str = Body(...),
     email: str =Body(...),
     password: str = Body(...),
-    teamName: str = Body(...)
+    role: str = Body(...),
+    teamName: Optional[str] = None
     ):
 
-    logger.info(f'/api/auth/register POST with\n{name}\t{email}\t{password}\t{teamName}')
+    if teamName is  None:
+        teamName =  "No"
+
+    logger.info(f'/api/auth/register POST with\n{name}\t{email}\t{password}\t{teamName}\t{role}')
     msg = await Member_registration_service(name, teamName, password, email)
     logger.info(f'registration class passed with {msg}')
 
@@ -48,7 +52,7 @@ async def register(
         "id": 1,
         "name": name,
         "email": email,
-        "role": "user",
+        "role": role,
         "teamId": None  # можно взять из teamName, если создаётся команда
     }
     
