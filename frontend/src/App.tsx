@@ -13,25 +13,29 @@ function App() {
   if (!isAuthenticated) {
     return (
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
   }
 
   return (
     <Routes>
-      {user?.role === 'PARTICIPANT' && (
-        <Route path="/*" element={<ParticipantDashboard />} />
-      )}
-      {user?.role === 'JURY' && (
-        <Route path="/*" element={<JuryPanel />} />
-      )}
-      {user?.role === 'ORGANIZER' && (
-        <Route path="/*" element={<OrganizerBoard />} />
-      )}
-      <Route path="*" element={<Navigate to="/" replace />} />
+    {/* Таблица лидеров доступна всем авторизованным по отдельному пути */}
+    <Route path="/leaderboard" element={<OrganizerBoard />} />
+
+    {/* Основные маршруты по ролям */}
+    {user?.role.toUpperCase() === 'PARTICIPANT' && (
+      <Route path="/*" element={<ParticipantDashboard />} />
+    )}
+    {user?.role.toUpperCase() === 'JURY' && (
+      <Route path="/*" element={<JuryPanel />} />
+    )}
+    {user?.role.toUpperCase() === 'ORGANIZER' && (
+      <Route path="/*" element={<OrganizerBoard />} />
+    )}
+    <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

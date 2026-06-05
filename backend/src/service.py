@@ -9,15 +9,23 @@ import re
 import urllib.request
 import zipfile
 
-async def Member_registration_service(fio: str, group_name:str, password:str, email:str, link="No info"):
+async def Member_registration_service(fio: str, group_name:str, password:str, email:str, role, link="No info"):
     try:
         session = AsyncSessionLocal()
-        await MembersCRUD.add(session, fio, group_name, password, email, link)
-        logger.info('Table CRUD TRYING')
-        await TableCRUD.add_group(AsyncSessionLocal(), group_name) 
+        await MembersCRUD.add(session, fio, group_name, password, email, link, role)
+        
+        # Записываем команду в таблицу groups ТОЛЬКО если это участники
+        if role.upper() == 'PARTICIPANT':
+            logger.info('Table CRUD TRYING')
+            try:
+                await TableCRUD.add_group(AsyncSessionLocal(), group_name) 
+            except Exception as g_err:
+                logger.warning(f"Команда уже существует или ошибка: {g_err}")
+                
         return "succes!"
     except Exception as e:
-        return e
+        logger.error(f"Ошибка сохранения в базу: {e}")
+        return str(e)
 
 
 
@@ -203,7 +211,7 @@ async def doc_git_analytic(url: str, words_list: list) -> dict:
             secret_penalty = min(len(detected_secrets) * 2, 4)  # максимум штраф 4 балла
             complexity_penalty = 3 if avg_complexity > 15 else 0
 
-            final_score = int(max(1, 10 - (10 - structure_score) - secret_penalty - complexity_penalty))
+            final_score = int(max(1, 10 - (10 - structure_score) - secret_penalty - complexity_penalty)) * 5
 
             # Вид проверки структуры для отчета
             structure_status = {

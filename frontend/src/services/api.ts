@@ -71,7 +71,7 @@ export const teamsApi = {
 // POST /api/artifacts/presentation  — FormData с file + teamId
 // POST /api/artifacts/screencast    — принимает { teamId, url }
 export const artifactsApi = {
-  getByTeam: (teamId: string) => request<Artifacts>(`/artifacts/${teamId}`),
+  getByTeam: (teamId: string) => request<any>(`/artifacts/${teamId}`),
 
   submitRepo: (teamId: string, repoLink: string) =>
     request<Artifacts>('/artifacts/repo', {

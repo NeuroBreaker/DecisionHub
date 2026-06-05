@@ -10,7 +10,8 @@ from service import doc_git_analytic
 from database import TableCRUD, AsyncSessionLocal
 from sqlalchemy import text
 from typing import Optional
-
+import uuid
+from fastapi import HTTPException
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,28 +35,27 @@ app.add_middleware(
 @app.post("/api/auth/register")
 async def register(
     name: str = Body(...),
-    email: str =Body(...),
+    email: str = Body(...),
     password: str = Body(...),
     role: str = Body(...),
-    teamName: Optional[str] = None
-    ):
+    teamName: Optional[str] = Body(None) # <--- ВОТ ЗДЕСЬ БЫЛА ГЛАВНАЯ ПРОБЛЕМА
+):
+    # Если участник вписал команду, берем ее. Иначе генерируем системную заглушку.
+    if role.upper() == "PARTICIPANT" and teamName:
+        final_team = teamName
+    else:
+        final_team = f"System_{role}_{uuid.uuid4().hex[:8]}"
 
-    if teamName is  None:
-        teamName =  "No"
-
-    logger.info(f'/api/auth/register POST with\n{name}\t{email}\t{password}\t{teamName}\t{role}')
-    msg = await Member_registration_service(name, teamName, password, email)
-    logger.info(f'registration class passed with {msg}')
-
-    access_token = "some-jwt-token"
+    logger.info(f'/api/auth/register POST with\n{name}\t{email}\t{password}\t{final_team}\t{role}')
+    msg = await Member_registration_service(name, final_team, password, email, role)
+    
+    access_token = "common"
     user = {
-        "id": 1,
         "name": name,
         "email": email,
         "role": role,
-        "teamId": None  # можно взять из teamName, если создаётся команда
+        "teamname": final_team
     }
-    
     return {"access_token": access_token, "user": user}
 
 
@@ -109,7 +109,7 @@ async def get_artifacts_status(teamId: str):
 
 
 @app.post("/api/auth/login")
-async def login(email: str = Body(...), password: str = Body(...) ):
+async def login(email: str = Body(...), password: str = Body(...)):
     user = await Member_login_service(password, email)
     logger.info(f'/api/auth/login WITH {user}')
 
@@ -121,7 +121,7 @@ async def login(email: str = Body(...), password: str = Body(...) ):
                 #"id": user.id,
                 "name": user.fio,
                 "email": user.email,
-                "role": "PARTICIPANT",
+                "role": user.role,
                 "teamname": user.group_name
             }
         }
@@ -140,17 +140,121 @@ def get_me():
 
 
 @app.get("/api/teams")
-def get_teams():
+async def get_teams():
     logger.info('/api/teams GET')
+    session = AsyncSessionLocal()
+    try:
+        query = text("SELECT db_id, group_name FROM groups")
+        result = await session.execute(query)
+        rows = result.fetchall()
+        # Возвращаем в ID именно имя команды, а системные команды пропускаем
+        return [{"id": r[1], "name": r[1]} for r in rows if not r[1].startswith("System_")]
+    except Exception as e:
+        logger.error(f"Error getting teams: {e}")
+        return []
+    finally:
+        await session.close()
 
-@app.post("/api/teams")           # ← тут было /api/auth/me — это был баг
-def create_team():
-    logger.info('/api/teams POST')
+@app.post("/api/scores")
+async def submit_scores(data: dict = Body(...)):
+    logger.info(f"Scores received: {data}")
+    group_name = data.get("teamId")
+    total_score = data.get("total", 0)
+
+    session = AsyncSessionLocal()
+    try:
+        # Умножаем на 10 (например 8.5 балла -> 85), т.к. в БД колонка INT
+        score_int = int(float(total_score) * 10)
+        
+        stmt = text("UPDATE groups SET group_score_total = :score WHERE group_name = :gname")
+        await session.execute(stmt, {"score": score_int, "gname": group_name})
+        await session.commit()
+        return {"status": "ok", "saved_score": score_int}
+    except Exception as e:
+        logger.error(f"Error saving scores: {e}")
+        return {"error": str(e)}
+    finally:
+        await session.close()
 
 @app.get("/api/leaderboard")
-def get_lead():
+async def get_lead():
     logger.info('/api/lead GET')
+    session = AsyncSessionLocal()
+    try:
+        query = text("""
+            SELECT 
+                g.db_id, g.group_name, g.github_score, g.doc_score, g.present_score, g.video_score, g.group_score_total,
+                m.fio, m.email, m.role, m.db_id as member_id
+            FROM groups g
+            LEFT JOIN members m ON g.group_name = m.group_name
+        """)
+        result = await session.execute(query)
+        rows = result.fetchall()
 
+        teams_data = {}
+        for row in rows:
+            g_name = row[1]
+            
+            # ПРОПУСКАЕМ ТЕХНИЧЕСКИЕ "СИСТЕМНЫЕ" КОМАНДЫ (Жюри, Орги)
+            if g_name.startswith("System_"):
+                continue
+
+            github_score = row[2] or 0
+            doc_score = row[3] or 0
+            present_score = row[4] or 0
+            video_score = row[5] or 0
+            group_score_total = row[6] or 0
+            
+            member_fio = row[7]
+
+            if g_name not in teams_data:
+                # Математика итогового балла
+                autoScore = github_score + doc_score + present_score + video_score
+                avg_jury = (group_score_total / 10.0) if group_score_total else 0.0
+                
+                # Приводим авто-баллы к 10-балльной шкале
+                auto_normalized = (autoScore / 100.0) * 10.0
+                # Если жюри оценило, считаем среднее. Если нет - берем только автопроверку.
+                total = (auto_normalized + avg_jury) / 2.0 if avg_jury > 0 else auto_normalized
+
+                teams_data[g_name] = {
+                    "rank": 0,
+                    "team": {
+                        "id": str(row[0]),
+                        "name": g_name,
+                        "status": "CHECKED" if group_score_total > 0 else "ACTIVE",
+                        "createdAt": "2024-01-01",
+                        "members": []
+                    },
+                    "artifacts": {
+                        "repoCheck": { "status": "SUCCESS" if github_score > 0 else "NOT_SUBMITTED", "score": github_score },
+                        "docCheck": { "status": "SUCCESS" if doc_score > 0 else "NOT_SUBMITTED", "score": doc_score },
+                        "presentationCheck": { "status": "SUCCESS" if present_score > 0 else "NOT_SUBMITTED", "score": present_score },
+                        "screencastCheck": { "status": "SUCCESS" if video_score > 0 else "NOT_SUBMITTED", "score": video_score }
+                    },
+                    "autoScore": autoScore,
+                    "juryScores": [{"score": avg_jury}] if avg_jury > 0 else [],
+                    "avgJuryScore": avg_jury,
+                    "totalScore": total,
+                    "isFinalized": group_score_total > 0
+                }
+            
+            if member_fio:
+                teams_data[g_name]["team"]["members"].append({"name": member_fio})
+
+        leaderboard = list(teams_data.values())
+        # Сортировка по итоговым баллам (кто больше - тот выше)
+        leaderboard.sort(key=lambda x: x["totalScore"], reverse=True)
+        
+        for i, entry in enumerate(leaderboard):
+            entry["rank"] = i + 1
+
+        return leaderboard
+    except Exception as e:
+        logger.error(f"Error in get_lead: {e}")
+        return []
+    finally:
+        await session.close()
 
 #==============
 
@@ -182,6 +286,7 @@ async def post_arti(data: dict):  # Принимает любой JSON-слов�
 @app.post("/api/artifacts/documentation")
 async def post_doc(file: UploadFile = File(...), teamId: str = Form(...)):
     result = await Doc_analytic(file, words_list=None)
+    result = result *  2#type:ignore
     await TableCRUD.update(AsyncSessionLocal(), teamId, "doc_score", result)#type:ignore
 
     logger.info(f'/api/art/doc POST WITH {result}')
@@ -202,6 +307,7 @@ async def post_prese(file: UploadFile = File(...), teamId: str = Form(...)):
         "контакты"]
 
     to_return = await Present_analytic(file, REQUIRED_KEYWORDS)
+    to_return = to_return * 2#type:ignore
     await TableCRUD.update(AsyncSessionLocal(), teamId, "present_score", to_return)#type:ignore
 
     logger.info(f"/api/art/present POST ENDED WITH {to_return}")
