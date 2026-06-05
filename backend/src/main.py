@@ -17,7 +17,7 @@ async def process():
 if __name__ == "__main__":
     try:
         #asyncio.run(main())
-        uvicorn.run("handlers:app", host="0.0.0.0", port=8000, reload=True)
+        uvicorn.run("handlers:app", host="0.0.0.0", port=8080, reload=True)
     except KeyboardInterrupt:
         logger.exception("Keyboard Iterapt!!!")
 
