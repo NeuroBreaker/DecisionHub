@@ -1,7 +1,3 @@
-// src/services/api.ts
-// Все запросы к FastAPI backend через этот файл.
-// Базовый URL берётся из .env: VITE_API_URL=http://localhost:8000/api
-
 import type { User, Team, Artifacts, JuryScore, LeaderboardEntry, RegisterData } from '@/types';
 
 const API_BASE = '/api';
