@@ -12,7 +12,7 @@ RUN uv sync --frozen --no-dev
 
 COPY . .
 
-FROM python:3.11-slim-bookworm
+FROM python:slim
 
 WORKDIR /app
 
