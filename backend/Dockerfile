@@ -7,4 +7,6 @@ COPY . .
 
 RUN uv sync --locked
 
+EXPOSE 8080
+
 CMD ["uv", "run", "src/main.py"]
