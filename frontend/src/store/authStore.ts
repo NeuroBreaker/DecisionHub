@@ -1,5 +1,3 @@
-// src/store/authStore.ts
-
 import { create } from 'zustand';
 import { authApi, setToken } from '@/services/api';
 import type { User, RegisterData } from '@/types';

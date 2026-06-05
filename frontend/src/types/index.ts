@@ -1,5 +1,3 @@
-// src/types/index.ts
-
 export type Role = 'PARTICIPANT' | 'JURY' | 'ORGANIZER';
 
 export interface User {
