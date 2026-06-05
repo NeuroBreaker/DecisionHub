@@ -1,13 +1,11 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, UploadFile, Form, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from loguru import logger
 from database import PostgrePrepare, Postgrepool
 from fastapi import Body
-
-from service import Member_registration_service, Member_login_service
-
+from service import Member_registration_service, Member_login_service, Present_analytic, Doc_analytic, Video_analytic
 
 
 @asynccontextmanager
@@ -65,7 +63,7 @@ async def login(email: str = Body(...), password: str = Body(...) ):
 
     if user:
         return {
-            "access_token": "временно-любая-строка",
+            "access_token": "common",
             "user": {
                 #"id": user.id,
                 "name": user.fio,
@@ -109,17 +107,41 @@ def post_arti():
 
 
 @app.post("/api/artifacts/documentation")
-def post_doc():
-    logger.info('/api/art/doc POST')
+async def post_doc(file: UploadFile = File(...), teamId: str = Form(...)):
+    result = await Doc_analytic(file, words_list=None)
+
+    logger.info(f'/api/art/doc POST WITH {result}')
+
+
+
+
 
 @app.post("/api/artifacts/presentation")
-def post_prese():
-    logger.info('/api/art/present POST')
+async def post_prese(file: UploadFile = File(...), teamId: str = Form(...)):
+    REQUIRED_KEYWORDS = [
+        "проблема", 
+        "решение", 
+        "целевая аудитория", 
+        "стек", 
+        "демо", 
+        "команда", 
+        "контакты"]
+    to_return = await Present_analytic(file, REQUIRED_KEYWORDS)
+    logger.info(f"/api/art/present POST ENDED WITH {to_return}")
+
+
+
+
+class VideoRequest(BaseModel):
+    url: str
 
 
 @app.post("/api/artifacts/screencast")
-def post_cast():
-    logger.info('/api/art/cast POST')
+async def post_cast(data: VideoRequest):
+    word_list = ['база данных', 'интерфейс', 'запуск', 'клиент']
+    result = await Video_analytic(url=data.url, words_list=word_list) 
+    logger.info(f'/api/art/cast POST ENDED WITH {result}')
+    return result
 
 
 

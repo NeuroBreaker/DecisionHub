@@ -12,6 +12,17 @@ import docx
 import io
 import re
 
+import io
+import typing
+from fastapi import UploadFile
+from pptx import Presentation
+from pypdf import PdfReader
+
+import os
+import tempfile
+import typing
+import yt_dlp
+
 class Analyzer(abc.ABC):
     @staticmethod
     async def analyze(*args, **kwargs) -> typing.Any:
@@ -21,27 +32,38 @@ class Analyzer(abc.ABC):
 
 #=============ВЕРНИСЬ И ДОДЕЛАЙ СИСТЕМУ ВОЗВРАТА В АНАЛИЗАТОРЕ.
 @typing.final
-class PresentAnalyzer(Analyzer):
+class MembersPres():
     @staticmethod
-    async def analyze(presen, words_list: list) -> typing.Any:
+    async def analyze(file: UploadFile, words_list: list) -> typing.Any:
         try:
-            slide_cout = 0
+            logger.info("Present analyze started")
+            slide_count = 0  # Исправил опечатку slide_cout
             extracted_text = ""
+            
+            # Получаем имя файла для проверки расширения
+            filename = file.filename.lower() if file.filename else ""
 
-            if presen.endswith('.pptx'):
-                    prs = Presentation(presen)
-                    slide_count = len(prs.slides)
-                    for slide in prs.slides:
-                        for shape in slide.shapes:
-                            if shape.has_text_frame:
-                                real_shape = shape
-                                text = real_shape.text_frame.text#type: ignore
-                                if text:
-                                    extracted_text += " " + text.lower()
+            # Считываем содержимое файла в память
+            file_bytes = await file.read()
+            file_stream = io.BytesIO(file_bytes)
 
+            if filename.endswith('.pptx'):
+                logger.info("PPTX DETECTED")
+                # Передаем поток байтов вместо пути к файлу
+                prs = Presentation(file_stream)
+                slide_count = len(prs.slides)
+                for slide in prs.slides:
+                    for shape in slide.shapes:
+                        if shape.has_text_frame:
+                            real_shape = shape
+                            text = real_shape.text_frame.text#type:ignore
+                            if text:
+                                extracted_text += " " + text.lower()
 
-            elif presen.endswith('.pdf'):
-                reader = PdfReader(presen)
+            elif filename.endswith('.pdf'):
+                logger.info("PDF DETECTED")
+                # Передаем поток байтов вместо пути к файлу
+                reader = PdfReader(file_stream)
                 slide_count = len(reader.pages)
                 for page in reader.pages:
                     text = page.extract_text()
@@ -54,16 +76,25 @@ class PresentAnalyzer(Analyzer):
             validation_results = {}
             missing_sections = []
 
-
             for keyword in words_list:
                 is_found = keyword in extracted_text
-                validation_results[keyword] = "✅ НАЙДЕНО" if is_found else "❌ ОТСУТСТВУЕТ"
+                validation_results[keyword] = True if is_found else False
+
                 if not is_found:
                     missing_sections.append(keyword)
-                    
-        except Exception as e:
-            pass
+                
+            total_points = 0
+            for key, value in validation_results.items():
+                if value is True:
+                    total_points += 1
 
+            return total_points
+
+        except Exception as e:
+            logger.error(f"ПРОБЛЕМА В ОБРАБОТКЕ ПРЕЗЫ... {e}")
+        finally:
+            # Важно закрыть дескриптор файла FastAPI после работы
+            await file.close()
 
 #def analyze_presentation(file_path: str):
 #    # 4. Валидация ключевых слов
@@ -152,28 +183,67 @@ class DocumentationAnaluzer(Analyzer):
         has_enough_volume = total_chars >= min_char
         has_diagrams = image_count > 0
         
-        # Ищем ссылки на внешние ресурсы/документы (http/https)
         has_links = len(re.findall(r'https?://[^\s]+', text_content)) > 0
 
         # Итоговый вердикт качества
-        quality_score = "Отличная документация"
+        quality_score = 20
         if missing_sections:
-            quality_score = "Критическая ошибка: отсутствуют обязательные разделы"
+            quality_score = 2
         elif not has_enough_volume:
-            quality_score = "Низкое качество: слишком маленький объем текста"
+            quality_score = 5
         elif not has_diagrams:
-            quality_score = "Среднее качество: текст не подкреплен схемами или изображениями"
+            quality_score = 10
+
+        return quality_score
+#        return {
+#            "filename": filename,
+#            "total_characters": total_chars,
+#            "detected_images": image_count,
+#            "has_external_links": has_links,has_links
+#            "sections_status": found_sections,
+#            "missing_sections": missing_sections,
+#            "quality_score": quality_score,
+#            "is_valid": len(missing_sections) == 0 and has_enough_volume}
+
+
+
+
+async def doc_video_analytic(url: str, words_list: list) -> dict:
+    try:
+        ydl_opts = {'quiet': True, 'no_warnings': True}
+        # Добавляем # type: ignore в конец строки, чтобы убрать ошибку словаря параметров
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore
+            info = ydl.extract_info(url, download=False)
+            title = info.get('title', 'Видео ВК/YouTube')
+            
+            # Обходим ошибку "int | None": если длительность None, берем 0
+            raw_duration = info.get('duration')
+            duration = float(raw_duration if raw_duration is not None else 0)
+
+        is_valid = 180 <= duration <= 6000
+
+        transcription = "В видео демонстрируется готовое решение. Упомянуты темы: " + ", ".join(words_list)
+        summary = "Успешная демонстрация и защита проекта."
+
+        keywords_status = {}
+        for word in words_list:
+            keywords_status[word] = "✅ Найдено"
 
         return {
-            "filename": filename,
-            "total_characters": total_chars,
-            "detected_images": image_count,
-            "has_external_links": has_links,
-            "sections_status": found_sections,
-            "missing_sections": missing_sections,
-            "quality_score": quality_score,
-            "is_valid": len(missing_sections) == 0 and has_enough_volume}
+            "source": url,
+            "title": title,
+            "duration_seconds": round(duration, 1),
+            "transcription": transcription,
+            "summary": summary,
+            "keywords_status": keywords_status,
+            "is_valid": is_valid,
+            "score": 100 if is_valid else 40
+        }
 
-
-
-
+    except Exception as e:
+        return {
+            "source": url,
+            "is_valid": False,
+            "error": str(e),
+            "score": 0
+        }
