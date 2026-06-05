@@ -23,7 +23,8 @@ class Members(Base):
     fio:              Mapped [str] = mapped_column(nullable=False)
     group_name:       Mapped [str] = mapped_column(nullable=False)
     github_link:      Mapped [str] = mapped_column(nullable=False)
-    present:          Mapped [bytes] = mapped_column(LargeBinary)
+    email:         Mapped [str] = mapped_column(nullable=False)
+    password:         Mapped [str] = mapped_column(nullable=False)
 
 
 class Admins(Base):

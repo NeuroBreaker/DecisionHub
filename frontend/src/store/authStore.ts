@@ -1,9 +1,14 @@
+// src/store/authStore.ts
+
 import { create } from 'zustand';
+import { authApi, setToken } from '@/services/api';
+import type { User, RegisterData } from '@/types';
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: any | null;
+  user: User | null;
   login: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => void;
 }
 
@@ -12,20 +17,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
 
   login: async (email, password) => {
-    // Вызов вашего Python бэкенда
-    const response = await fetch("http://localhost:8000/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      set({ isAuthenticated: true, user: data.user });
-    } else {
-      throw new Error("Неверный логин или пароль");
-    }
+    const data = await authApi.login(email, password);
+    setToken(data.access_token);
+    set({ isAuthenticated: true, user: data.user });
   },
 
-  logout: () => set({ isAuthenticated: false, user: null }),
+  register: async (registerData) => {
+    const data = await authApi.register(registerData);
+    setToken(data.access_token);
+    set({ isAuthenticated: true, user: data.user });
+  },
+
+  logout: () => {
+    setToken(null);
+    set({ isAuthenticated: false, user: null });
+  },
 }));
