@@ -1,7 +1,7 @@
 import asyncio
 
 from sqlalchemy.orm import session
-from database import MembersCRUD, AsyncSessionLocal
+from database import MembersCRUD, AsyncSessionLocal, TableCRUD
 from analyze import MembersPres, DocumentationAnaluzer, doc_video_analytic
 from loguru import logger
 import io
@@ -13,7 +13,8 @@ async def Member_registration_service(fio: str, group_name:str, password:str, em
     try:
         session = AsyncSessionLocal()
         await MembersCRUD.add(session, fio, group_name, password, email, link)
-        
+        logger.info('Table CRUD TRYING')
+        await TableCRUD.add_group(AsyncSessionLocal(), group_name) 
         return "succes!"
     except Exception as e:
         return e
@@ -32,7 +33,7 @@ async def Member_login_service(password:str, email:str):
 
 async def Present_analytic(file, words_list):
     try:
-        session = AsyncSessionLocal()
+
         result = await MembersPres.analyze(file, words_list)
         logger.info("MemberPres is passed")
 
@@ -41,7 +42,10 @@ async def Present_analytic(file, words_list):
 
     except Exception as e:
         logger.info(f"Problem with presentation... {e}")
-        
+       
+
+
+
 async def Doc_analytic(file,words_list, min_char=100):
     # Если список ключевых слов не передан извне, задаем дефолтный набор
     if words_list is None:

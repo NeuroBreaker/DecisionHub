@@ -75,6 +75,86 @@ class MembersCRUD(CrudDatabase):
 
         return result.scalar_one_or_none()
 
+
+    @staticmethod
+    async def get_group_name(session, group_name:str, typ: str):
+        types = {
+            "present_score":"present_score",
+            "doc_score":"doc_score",
+            "github_score":"github_score",
+            "video_score":"video_score"
+        }
+
+        col_name = types.get(typ)
+
+        if col_name is None:
+            return "Nothing"
+
+        col = getattr(Group, col_name)
+
+        stmt = select(col).where(Group.group_name==group_name)
+        result = session.execute(stmt)
+        return result.scalar_one_or_none()
+
+
+
+
+
+
+@typing.final
+class TableCRUD(CrudDatabase):
+    @staticmethod
+    async def update(session, group_name: str, typ:str, score: int) -> None:
+        types = {
+            "present_score":"present_score",
+            "doc_score":"doc_score",
+            "github_score":"github_score",
+            "video_score":"video_score"
+        }
+        
+        col = types.get(typ)
+        stmt =  update(Group).where(Group.group_name==group_name).values({col:score})
+
+        await session.execute(stmt)
+        await session.commit()
+        await session.close()
+
+
+
+
+    @staticmethod
+    async def get_score(session, group_name:str, typ: str):
+        types = {
+            "present_score":"present_score",
+            "doc_score":"doc_score",
+            "github_score":"github_score",
+            "video_score":"video_score"
+        }
+
+        col_name = types.get(typ)
+
+        if col_name is None:
+            return "Nothing"
+
+        col = getattr(Group, col_name)
+
+        stmt = select(col).where(Group.group_name==group_name)
+        result = session.execute(stmt)
+        await session.close()
+        return result.scalar_one_or_none()
+
+
+    @staticmethod
+    async def add_group(session, group_name:str):
+        new_group = Group(group_name=group_name)
+        session.add(new_group)
+        await session.commit()
+        await session.close()
+
+
+
+
+
 class Postgrepool():
     @staticmethod
     def get_pool():

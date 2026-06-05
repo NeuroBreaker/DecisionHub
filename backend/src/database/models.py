@@ -46,5 +46,10 @@ class Group(Base):
     __tablename__ = "groups"
 
     db_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    present_score: Mapped[int] = mapped_column()
+    doc_score: Mapped[int] = mapped_column()
+    github_score: Mapped[int] = mapped_column()
+    video_score: Mapped[int] = mapped_column()
     group_name:       Mapped [str] = mapped_column(nullable=False)
-    group_score: Mapped[int | None] = mapped_column(nullable=True)
+    group_score_total: Mapped[int] = mapped_column(nullable=True)
+#

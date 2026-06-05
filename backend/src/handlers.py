@@ -7,6 +7,10 @@ from database import PostgrePrepare, Postgrepool
 from fastapi import Body
 from service import Member_registration_service, Member_login_service, Present_analytic, Doc_analytic, Video_analytic
 from service import doc_git_analytic
+from database import TableCRUD, AsyncSessionLocal
+from sqlalchemy import text
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -49,6 +53,51 @@ async def register(
     }
     
     return {"access_token": access_token, "user": user}
+
+
+
+@app.get("/api/artifacts/{teamId}")
+async def get_artifacts_status(teamId: str):
+    logger.info(f"GET artifacts status for team: {teamId}")
+    
+    # Открываем сессию к БД
+    session = AsyncSessionLocal()
+    try:
+        # Делаем быстрый запрос к таблице groups (как в логах)
+        query = text(
+            "SELECT github_score, doc_score, present_score, video_score "
+            "FROM groups WHERE group_name = :teamId"
+        )
+        result = await session.execute(query, {"teamId": teamId})
+        row = result.fetchone()
+        
+        # Если команда не найдена в БД
+        if not row:
+            return {
+                "github_score": 0,
+                "doc_score": 0,
+                "present_score": 0,
+                "video_score": 0
+            }
+        
+        # Возвращаем баллы обратно фронтенду
+        return {
+            "github_score": row[0] or 0,
+            "doc_score": row[1] or 0,
+            "present_score": row[2] or 0,
+            "video_score": row[3] or 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching scores for team {teamId}: {e}")
+        return {"error": "Internal Server Error"}
+    finally:
+        # Обязательно закрываем сессию, чтобы не вызывать утечку соединений на хакатоне
+        await session.close()
+
+
+
+
 
 
 
@@ -111,9 +160,16 @@ async def post_arti(data: dict):  # Принимает любой JSON-слов�
     logger.info(f'DATA IS {data}')
     url = data.get("repoLink") or data.get("git") or data.get("link")
     logger.info(f'URL IS {url}')
-    
+
     result = await doc_git_analytic(url, ['readme', 'setup'])#type:ignore
     logger.info(f'/api/art/repo POST WITH {result}')
+    
+    score = result.get("score_out_of_10")
+    group_name = data.get('teamId')
+
+    logger.info(f"Try to insert score: {score}, group_name {group_name}")
+    await TableCRUD.update(AsyncSessionLocal(), group_name, "github_score", score)#type:ignore
+
     return result
 
 
@@ -122,6 +178,7 @@ async def post_arti(data: dict):  # Принимает любой JSON-слов�
 @app.post("/api/artifacts/documentation")
 async def post_doc(file: UploadFile = File(...), teamId: str = Form(...)):
     result = await Doc_analytic(file, words_list=None)
+    await TableCRUD.update(AsyncSessionLocal(), teamId, "doc_score", result)#type:ignore
 
     logger.info(f'/api/art/doc POST WITH {result}')
 
@@ -139,7 +196,10 @@ async def post_prese(file: UploadFile = File(...), teamId: str = Form(...)):
         "демо", 
         "команда", 
         "контакты"]
+
     to_return = await Present_analytic(file, REQUIRED_KEYWORDS)
+    await TableCRUD.update(AsyncSessionLocal(), teamId, "present_score", to_return)#type:ignore
+
     logger.info(f"/api/art/present POST ENDED WITH {to_return}")
 
 
@@ -147,12 +207,17 @@ async def post_prese(file: UploadFile = File(...), teamId: str = Form(...)):
 
 class VideoRequest(BaseModel):
     url: str
+    teamId: str
 
 
 @app.post("/api/artifacts/screencast")
 async def post_cast(data: VideoRequest):
     word_list = ['база данных', 'интерфейс', 'запуск', 'клиент']
     result = await Video_analytic(url=data.url, words_list=word_list) 
+
+    teamId = data.teamId
+    score = result.get('score')
+    await TableCRUD.update(AsyncSessionLocal(), teamId, "video_score", score)#type:ignore
     logger.info(f'/api/art/cast POST ENDED WITH {result}')
     return result
 
