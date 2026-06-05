@@ -1,6 +1,5 @@
-// src/pages/Auth/Register.tsx  ← НОВЫЙ ФАЙЛ, создайте эту папку и файл
-
 import { useState } from 'react';
+import type { SubmitEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -28,7 +27,7 @@ export default function RegisterPage() {
   const register = useAuthStore((state) => state.register);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);

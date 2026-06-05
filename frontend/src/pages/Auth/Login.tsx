@@ -1,7 +1,5 @@
-// src/pages/Auth/Login.tsx
-// ИСПРАВЛЕНО: SubmitEvent не существует в React — правильный тип React.FormEvent<HTMLFormElement>
-
 import { useState } from 'react';
+import type { SubmitEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -18,7 +16,7 @@ export default function LoginPage() {
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
