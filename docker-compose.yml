@@ -30,7 +30,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: decision_hub-db
     ports:
-      - "6105:5432"
+      - "6752:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
