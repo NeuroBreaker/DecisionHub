@@ -3,13 +3,11 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 from loguru import logger
-from enum import Enum
-from dataclasses import dataclass
 
-BASE_DIR = Path(__file__).resolve().parent
 CURRENT_FILE_PATH = Path(__file__).resolve()
+BASE_DIR = CURRENT_FILE_PATH.parent.parent
 SRC_DIR = BASE_DIR / "src"
-DOTENV_PATH = SRC_DIR.parent / ".env"
+DOTENV_PATH = BASE_DIR.parent / ".env"
 
 
 try:
