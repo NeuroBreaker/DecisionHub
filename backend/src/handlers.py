@@ -5,7 +5,13 @@ from pydantic import BaseModel
 from loguru import logger
 from database import Postgrepool
 from fastapi import Body
-from service import Member_registration_service, Member_login_service, Present_analytic, Doc_analytic, Video_analytic
+from service import (
+    Member_registration_service,
+    Member_login_service,
+    Present_analytic,
+    Doc_analytic,
+    Video_analytic,
+)
 from service import doc_git_analytic
 from database import TableCRUD, AsyncSessionLocal
 from sqlalchemy import text
@@ -13,12 +19,14 @@ from typing import Optional
 import uuid
 import hashlib
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    #pool = Postgrepool.get_pool()
-    #await PostgrePrepare.prepare(pool)
-    #logger.info("БД инициализирована!")
+    # pool = Postgrepool.get_pool()
+    # await PostgrePrepare.prepare(pool)
+    # logger.info("БД инициализирована!")
     yield
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -34,11 +42,8 @@ app.add_middleware(
 class SimplePasswordManager:
     @staticmethod
     def hash_password(password: str) -> str:
-        hash_object = hashlib.sha512(password.encode('utf-8'))
+        hash_object = hashlib.sha512(password.encode("utf-8"))
         return hash_object.hexdigest()
-        
-
-
 
 
 @app.post("/api/auth/register")
@@ -47,7 +52,7 @@ async def register(
     email: str = Body(...),
     password: str = Body(...),
     role: str = Body(...),
-    teamName: Optional[str] = Body(None) 
+    teamName: Optional[str] = Body(None),
 ):
     password = SimplePasswordManager.hash_password(password)
 
@@ -56,18 +61,14 @@ async def register(
     else:
         final_team = f"System_{role}_{uuid.uuid4().hex[:8]}"
 
-    logger.info(f'/api/auth/register POST with\n{name}\t{email}\t{password}\t{final_team}\t{role}')
+    logger.info(
+        f"/api/auth/register POST with\n{name}\t{email}\t{password}\t{final_team}\t{role}"
+    )
     msg = await Member_registration_service(name, final_team, password, email, role)
-    
-    access_token = "common"
-    user = {
-        "name": name,
-        "email": email,
-        "role": role,
-        "teamname": final_team
-    }
-    return {"access_token": access_token, "user": user}
 
+    access_token = "common"
+    user = {"name": name, "email": email, "role": role, "teamname": final_team}
+    return {"access_token": access_token, "user": user}
 
 
 @app.get("/api/artifacts/{teamId}")
@@ -81,22 +82,22 @@ async def get_artifacts_status(teamId: str):
         )
         result = await session.execute(query, {"teamId": teamId})
         row = result.fetchone()
-        
+
         if not row:
             return {
                 "github_score": 0,
                 "doc_score": 0,
                 "present_score": 0,
-                "video_score": 0
+                "video_score": 0,
             }
-        
+
         return {
             "github_score": row[0] or 0,
             "doc_score": row[1] or 0,
             "present_score": row[2] or 0,
-            "video_score": row[3] or 0
+            "video_score": row[3] or 0,
         }
-        
+
     except Exception as e:
         logger.error(f"Error fetching scores for team {teamId}: {e}")
         return {"error": "Internal Server Error"}
@@ -104,46 +105,47 @@ async def get_artifacts_status(teamId: str):
         await session.close()
 
 
-
 @app.post("/api/auth/login")
 async def login(email: str = Body(...), password: str = Body(...)):
 
     password = SimplePasswordManager.hash_password(password)
     user = await Member_login_service(password, email)
-    logger.info(f'/api/auth/login WITH  {email}')
+    logger.info(f"/api/auth/login WITH  {email}")
 
     if user:
         return {
             "access_token": "common",
             "user": {
-                #"id": user.id,
+                # "id": user.id,
                 "name": user.fio,
                 "email": user.email,
                 "role": user.role,
-                "teamname": user.group_name
-            }
+                "teamname": user.group_name,
+            },
         }
 
-    else: return "Сначала зарегестрируйтесь"
+    else:
+        return "Сначала зарегестрируйтесь"
 
 
 @app.get("/api/auth/me")
 def get_me():
-    logger.info('/api/auth/me GET')
+    logger.info("/api/auth/me GET")
 
 
-
-#========teams========
+# ========teams========
 @app.get("/api/teams")
 async def get_teams():
-    logger.info('/api/teams GET')
+    logger.info("/api/teams GET")
     session = AsyncSessionLocal()
     try:
         query = text("SELECT db_id, group_name FROM groups")
         result = await session.execute(query)
         rows = result.fetchall()
 
-        return [{"id": r[1], "name": r[1]} for r in rows if not r[1].startswith("System_")]
+        return [
+            {"id": r[1], "name": r[1]} for r in rows if not r[1].startswith("System_")
+        ]
     except Exception as e:
         logger.error(f"Error getting teams: {e}")
         return []
@@ -159,9 +161,11 @@ async def submit_scores(data: dict = Body(...)):
 
     session = AsyncSessionLocal()
     try:
-        score_int = int(float(total_score) * 10)#correcting auto scores
-        
-        stmt = text("UPDATE groups SET group_score_total = :score WHERE group_name = :gname")
+        score_int = int(float(total_score) * 10)  # correcting auto scores
+
+        stmt = text(
+            "UPDATE groups SET group_score_total = :score WHERE group_name = :gname"
+        )
         await session.execute(stmt, {"score": score_int, "gname": group_name})
         await session.commit()
         return {"status": "ok", "saved_score": score_int}
@@ -174,7 +178,7 @@ async def submit_scores(data: dict = Body(...)):
 
 @app.get("/api/leaderboard")
 async def get_lead():
-    logger.info('/api/lead GET')
+    logger.info("/api/lead GET")
     session = AsyncSessionLocal()
     try:
         query = text("""
@@ -190,7 +194,7 @@ async def get_lead():
         teams_data = {}
         for row in rows:
             g_name = row[1]
-            
+
             if g_name.startswith("System_"):
                 continue
             github_score = row[2] or 0
@@ -198,15 +202,19 @@ async def get_lead():
             present_score = row[4] or 0
             video_score = row[5] or 0
             group_score_total = row[6] or 0
-            
+
             member_fio = row[7]
 
-            if g_name not in teams_data:#scores system
+            if g_name not in teams_data:  # scores system
                 autoScore = github_score + doc_score + present_score + video_score
                 avg_jury = (group_score_total / 10.0) if group_score_total else 0.0
-                
+
                 auto_normalized = (autoScore / 100.0) * 10.0
-                total = (auto_normalized + avg_jury) / 2.0 if avg_jury > 0 else auto_normalized
+                total = (
+                    (auto_normalized + avg_jury) / 2.0
+                    if avg_jury > 0
+                    else auto_normalized
+                )
 
                 teams_data[g_name] = {
                     "rank": 0,
@@ -215,27 +223,43 @@ async def get_lead():
                         "name": g_name,
                         "status": "CHECKED" if group_score_total > 0 else "ACTIVE",
                         "createdAt": "2024-01-01",
-                        "members": []
+                        "members": [],
                     },
                     "artifacts": {
-                        "repoCheck": { "status": "SUCCESS" if github_score > 0 else "NOT_SUBMITTED", "score": github_score },
-                        "docCheck": { "status": "SUCCESS" if doc_score > 0 else "NOT_SUBMITTED", "score": doc_score },
-                        "presentationCheck": { "status": "SUCCESS" if present_score > 0 else "NOT_SUBMITTED", "score": present_score },
-                        "screencastCheck": { "status": "SUCCESS" if video_score > 0 else "NOT_SUBMITTED", "score": video_score }
+                        "repoCheck": {
+                            "status": "SUCCESS"
+                            if github_score > 0
+                            else "NOT_SUBMITTED",
+                            "score": github_score,
+                        },
+                        "docCheck": {
+                            "status": "SUCCESS" if doc_score > 0 else "NOT_SUBMITTED",
+                            "score": doc_score,
+                        },
+                        "presentationCheck": {
+                            "status": "SUCCESS"
+                            if present_score > 0
+                            else "NOT_SUBMITTED",
+                            "score": present_score,
+                        },
+                        "screencastCheck": {
+                            "status": "SUCCESS" if video_score > 0 else "NOT_SUBMITTED",
+                            "score": video_score,
+                        },
                     },
                     "autoScore": autoScore,
                     "juryScores": [{"score": avg_jury}] if avg_jury > 0 else [],
                     "avgJuryScore": avg_jury,
                     "totalScore": total,
-                    "isFinalized": group_score_total > 0
+                    "isFinalized": group_score_total > 0,
                 }
-            
+
             if member_fio:
                 teams_data[g_name]["team"]["members"].append({"name": member_fio})
 
         leaderboard = list(teams_data.values())
-        leaderboard.sort(key=lambda x: x["totalScore"], reverse=True)#sort here
-        
+        leaderboard.sort(key=lambda x: x["totalScore"], reverse=True)  # sort here
+
         for i, entry in enumerate(leaderboard):
             entry["rank"] = i + 1
 
@@ -246,57 +270,55 @@ async def get_lead():
     finally:
         await session.close()
 
-#=======================
+
+# =======================
 
 
 class GitRequest(BaseModel):
     url: str
 
+
 @app.post("/api/artifacts/repo")
 async def post_arti(data: dict):
     url = data.get("repoLink") or data.get("git") or data.get("link")
-    logger.info(f'URL IS {url}')
+    logger.info(f"URL IS {url}")
 
-    result = await doc_git_analytic(url, ['readme', 'setup'])#type:ignore
-    logger.info(f'/api/art/repo POST WITH {result}')
-    
+    result = await doc_git_analytic(url, ["readme", "setup"])  # type:ignore
+    logger.info(f"/api/art/repo POST WITH {result}")
+
     score = result.get("score_out_of_10")
-    group_name = data.get('teamId')
+    group_name = data.get("teamId")
 
     logger.info(f"Try to insert score: {score}, group_name {group_name}")
-    await TableCRUD.update(AsyncSessionLocal(), group_name, "github_score", score)#type:ignore
+    await TableCRUD.update(AsyncSessionLocal(), group_name, "github_score", score)  # type:ignore
 
     return result
-
-
 
 
 @app.post("/api/artifacts/documentation")
 async def post_doc(file: UploadFile = File(...), teamId: str = Form(...)):
     result = await Doc_analytic(file, words_list=None)
-    result = result *  2#type:ignore
-    await TableCRUD.update(AsyncSessionLocal(), teamId, "doc_score", result)#type:ignore
-    logger.info(f'/api/art/doc POST WITH {result}')
-
+    result = result * 2  # type:ignore
+    await TableCRUD.update(AsyncSessionLocal(), teamId, "doc_score", result)  # type:ignore
+    logger.info(f"/api/art/doc POST WITH {result}")
 
 
 @app.post("/api/artifacts/presentation")
 async def post_prese(file: UploadFile = File(...), teamId: str = Form(...)):
     REQUIRED_KEYWORDS = [
-        "проблема", 
-        "решение", 
-        "целевая аудитория", 
-        "стек", 
-        "демо", 
-        "команда", 
-        "контакты"]
+        "проблема",
+        "решение",
+        "целевая аудитория",
+        "стек",
+        "демо",
+        "команда",
+        "контакты",
+    ]
 
     to_return = await Present_analytic(file, REQUIRED_KEYWORDS)
-    to_return = to_return * 2#type:ignore
-    await TableCRUD.update(AsyncSessionLocal(), teamId, "present_score", to_return)#type:ignore
+    to_return = to_return * 2  # type:ignore
+    await TableCRUD.update(AsyncSessionLocal(), teamId, "present_score", to_return)  # type:ignore
     logger.info(f"/api/art/present POST ENDED WITH {to_return}")
-
-
 
 
 class VideoRequest(BaseModel):
@@ -306,11 +328,11 @@ class VideoRequest(BaseModel):
 
 @app.post("/api/artifacts/screencast")
 async def post_cast(data: VideoRequest):
-    word_list = ['база данных', 'интерфейс', 'запуск', 'клиент']
-    result = await Video_analytic(url=data.url, words_list=word_list) 
+    word_list = ["база данных", "интерфейс", "запуск", "клиент"]
+    result = await Video_analytic(url=data.url, words_list=word_list)
 
     teamId = data.teamId
-    score = result.get('score')
-    await TableCRUD.update(AsyncSessionLocal(), teamId, "video_score", score)#type:ignore
-    logger.info(f'/api/art/cast POST ENDED WITH {result}')
+    score = result.get("score")
+    await TableCRUD.update(AsyncSessionLocal(), teamId, "video_score", score)  # type:ignore
+    logger.info(f"/api/art/cast POST ENDED WITH {result}")
     return result
