@@ -133,7 +133,6 @@ def get_me():
     logger.info("/api/auth/me GET")
 
 
-# ========teams========
 @app.get("/api/teams")
 async def get_teams():
     logger.info("/api/teams GET")
@@ -269,9 +268,6 @@ async def get_lead():
         return []
     finally:
         await session.close()
-
-
-# =======================
 
 
 class GitRequest(BaseModel):
