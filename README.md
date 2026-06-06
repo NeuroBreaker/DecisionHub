@@ -60,7 +60,6 @@ DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@localhost:PORT/DATABASENAME
 Запуск из `DecisionHub/backend`:
 
 ```bash
-# Установка зависимостей и запуск через uv
 uv run src/main.py
 ```
 
