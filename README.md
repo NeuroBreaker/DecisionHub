@@ -10,35 +10,6 @@ docker-compose up -d --build
 
 > Веб-страница будет доступна по адресу: **http://localhost/**
 
----
-
-## 🔧 Локальный запуск сервисов по отдельности
-
-### 🗄️ PostgreSQL
-
-Установите PostgreSQL для своей системы, настройте пользователя, включите сервис и скопируйте строку подключения в файл `.env` в корне директории.
-
-### 🖥️ Frontend
-
-Запуск из `DecisionHub/frontend`:
-
-```bash
-npm install
-npm run build
-```
-
-### ⚙️ Backend
-
-Запуск из `DecisionHub/backend`:
-
-> [!NOTE]
-> Требуется предварительно настроить PostgreSQL
-
-```bash
-uv run src/main.py
-```
-
----
 
 ## 🛠 Технологический стек
 
