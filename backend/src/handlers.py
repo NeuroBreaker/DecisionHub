@@ -3,7 +3,7 @@ from fastapi import FastAPI, UploadFile, Form, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from loguru import logger
-from database import Postgrepool
+from database import Postgrepool, PostgrePrepare
 from fastapi import Body
 from service import (
     Member_registration_service,
@@ -22,9 +22,9 @@ import hashlib
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # pool = Postgrepool.get_pool()
-    # await PostgrePrepare.prepare(pool)
-    # logger.info("БД инициализирована!")
+    pool = Postgrepool.get_pool()
+    await PostgrePrepare.prepare(pool)
+    logger.info("БД инициализирована!")
     yield
 
 
