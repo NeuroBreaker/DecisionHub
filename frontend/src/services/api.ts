@@ -2,7 +2,6 @@ import type { User, Team, Artifacts, JuryScore, LeaderboardEntry, RegisterData }
 
 const API_BASE = '/api';
 
-// JWT-токен хранится в localStorage между сессиями
 let authToken: string | null = localStorage.getItem('authToken');
 
 export function setToken(token: string | null) {
@@ -11,7 +10,7 @@ export function setToken(token: string | null) {
   else localStorage.removeItem('authToken');
 }
 
-// Универсальный fetch-хелпер
+// fetch-хелпер
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const isFormData = options.body instanceof FormData;
 

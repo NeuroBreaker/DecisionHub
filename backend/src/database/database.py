@@ -1,15 +1,11 @@
-import sqlite3
-import aiosqlite
-import asyncio
 import abc
 import typing
-import psycopg
 from loguru import logger
 
-from database.models import Members, Admins, Jury, Group
-from sqlalchemy import select, update, delete, and_
+from database.models import Members, Group
+from sqlalchemy import select, update, and_
 from sqlalchemy.dialects.postgresql import insert
-from psycopg_pool import ConnectionPool, AsyncConnectionPool
+from psycopg_pool import AsyncConnectionPool
 from config import DATABASE_URL
 
 
@@ -22,67 +18,51 @@ class CrudDatabase(abc.ABC):
         pass
 
 
-
-
 class DatabasePrepare(abc.ABC):
     @staticmethod
     async def prepare(pool) -> None:
         pass
 
 
-
-#=======ADD ON CONFLICT STATMENT
-@typing.final
-class AdminCRUD(CrudDatabase):
-    def __init__(self, conn):
-        self.conn = conn
-
-    async def add(self, fio: str, status: str) -> None:
-        New_user = Admins(fio=fio, status=status)
-       
-        stmt = insert(Admins).values(
-            fio=fio,
-            status=status
-        )
-
-        await self.conn.execute(stmt)
-        await self.conn.commit()
-
-
-
-
 @typing.final
 class MembersCRUD(CrudDatabase):
     @staticmethod
-    async def add(session, fio: str, group_name: str, password, email:str, github_link: str, role:str) -> None:
-        New_user = Members(fio=fio, group_name=group_name, password=password, email=email)
-       
+    async def add(
+        session,
+        fio: str,
+        group_name: str,
+        password,
+        email: str,
+        github_link: str,
+        role: str,
+    ) -> None:
+        New_user = Members(
+            fio=fio, group_name=group_name, password=password, email=email
+        )
+
         stmt = insert(Members).values(
-            fio=fio,
-            group_name=group_name,
-            password=password,
-            email=email,
-            role=role
+            fio=fio, group_name=group_name, password=password, email=email, role=role
         )
 
         await session.execute(stmt)
         await session.commit()
 
     @staticmethod
-    async def get(session, email:str, password: str) -> None:
-        stmt = select(Members).where(and_(Members.email==email, Members.password==password))
+    async def get(session, email: str, password: str) -> None:
+        stmt = select(Members).where(
+            and_(Members.email == email, Members.password == password)
+        )
         result = await session.execute(stmt)
 
         return result.scalar_one_or_none()
 
-
     @staticmethod
-    async def get_group_name(session, group_name:str, typ: str):
+    async def get_group_name(session, group_name: str, typ: str):
         types = {
-            "present_score":"present_score",
-            "doc_score":"doc_score",
-            "github_score":"github_score",
-            "video_score":"video_score"
+            "present_score": "present_score",
+            "doc_score": "doc_score",
+            "github_score": "github_score",
+            "video_score": "video_score",
         }
 
         col_name = types.get(typ)
@@ -92,43 +72,36 @@ class MembersCRUD(CrudDatabase):
 
         col = getattr(Group, col_name)
 
-        stmt = select(col).where(Group.group_name==group_name)
+        stmt = select(col).where(Group.group_name == group_name)
         result = session.execute(stmt)
         return result.scalar_one_or_none()
-
-
-
-
 
 
 @typing.final
 class TableCRUD(CrudDatabase):
     @staticmethod
-    async def update(session, group_name: str, typ:str, score: int) -> None:
+    async def update(session, group_name: str, typ: str, score: int) -> None:
         types = {
-            "present_score":"present_score",
-            "doc_score":"doc_score",
-            "github_score":"github_score",
-            "video_score":"video_score"
+            "present_score": "present_score",
+            "doc_score": "doc_score",
+            "github_score": "github_score",
+            "video_score": "video_score",
         }
-        
+
         col = types.get(typ)
-        stmt =  update(Group).where(Group.group_name==group_name).values({col:score})
+        stmt = update(Group).where(Group.group_name == group_name).values({col: score})
 
         await session.execute(stmt)
         await session.commit()
         await session.close()
 
-
-
-
     @staticmethod
-    async def get_score(session, group_name:str, typ: str):
+    async def get_score(session, group_name: str, typ: str):
         types = {
-            "present_score":"present_score",
-            "doc_score":"doc_score",
-            "github_score":"github_score",
-            "video_score":"video_score"
+            "present_score": "present_score",
+            "doc_score": "doc_score",
+            "github_score": "github_score",
+            "video_score": "video_score",
         }
 
         col_name = types.get(typ)
@@ -138,40 +111,34 @@ class TableCRUD(CrudDatabase):
 
         col = getattr(Group, col_name)
 
-        stmt = select(col).where(Group.group_name==group_name)
+        stmt = select(col).where(Group.group_name == group_name)
         result = session.execute(stmt)
         await session.close()
         return result.scalar_one_or_none()
 
-
     @staticmethod
-    async def add_group(session, group_name:str):
+    async def add_group(session, group_name: str):
         new_group = Group(group_name=group_name)
         session.add(new_group)
         await session.commit()
         await session.close()
 
 
-
-
-
-class Postgrepool():
+class Postgrepool:
     @staticmethod
     def get_pool():
         pool_url = DATABASE_URL.replace("+asyncpg", "")
-        pool = AsyncConnectionPool(conninfo=f"{pool_url}?sslmode=disable&gssencmode=disable",
+        pool = AsyncConnectionPool(
+            conninfo=f"{pool_url}?sslmode=disable&gssencmode=disable",
             min_size=4,
-            max_size=10
+            max_size=10,
         )
-        
-        logger.info('Succes connection')
+
+        logger.info("Succes connection")
 
         return pool
 
 
-#============PASSWORD IN USERS NEDDED===========
-#============What we need to add to admin columns in?
-#============А собственно как нам хранить оценки за перзу и документацию и прочие?
 @typing.final
 class PostgrePrepare(DatabasePrepare):
     @staticmethod
@@ -182,24 +149,10 @@ class PostgrePrepare(DatabasePrepare):
                     await cur.execute("""CREATE TABLE IF NOT EXISTS members(
                     db_id  INT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
                     fio VARCHAR(60) NOT NULL,
-                    group_name VARCHAR(40) NOT NULL UNIQUE,
+                    group_name VARCHAR(40) NOT NULL,
                     role VARCHAR(100) NOT NULL,
                     email VARCHAR(100) NOT NULL,
-                    password VARCHAR(100) NOT NULL)
-                    """)
-
-
-                    await cur.execute("""CREATE TABLE IF NOT EXISTS admin(
-                    db_id  INT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-                    fio VARCHAR(60) NOT NULL,
-                    group_name VARCHAR(40) NOT NULL UNIQUE
-                    )
-                    """)
-
-                    await cur.execute("""CREATE TABLE IF NOT EXISTS jury(
-                    db_id INT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-                    fio VARCHAR(60) NOT NULL
-                    )
+                    password VARCHAR NOT NULL)
                     """)
 
                     await cur.execute("""CREATE TABLE IF NOT EXISTS groups(
@@ -212,13 +165,9 @@ class PostgrePrepare(DatabasePrepare):
                     group_name VARCHAR(30) 
                     )
                     """)
-                   
+
                     await conn.commit()
 
             logger.info("Tables created")
         except Exception as e:
-            logger.exception('Cant create table...', e)
-            
-
-
-
+            logger.exception("Cant create table...", e)

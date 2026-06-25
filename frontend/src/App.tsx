@@ -9,7 +9,6 @@ import Register from './pages/Auth/Register';
 function App() {
   const { user, isAuthenticated } = useAuthStore();
 
-  // Неавторизованные пользователи видят только /login и /register
   if (!isAuthenticated) {
     return (
       <Routes>
@@ -25,7 +24,6 @@ function App() {
     {/* Таблица лидеров доступна всем авторизованным по отдельному пути */}
     <Route path="/leaderboard" element={<OrganizerBoard />} />
 
-    {/* Основные маршруты по ролям */}
     {user?.role.toUpperCase() === 'PARTICIPANT' && (
       <Route path="/*" element={<ParticipantDashboard />} />
     )}

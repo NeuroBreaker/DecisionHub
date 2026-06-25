@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { teamsApi, scoresApi } from '@/services/api';
 import type { Team } from '@/types';
 
-// Критерии оценки (ключи – для внутреннего использования)
+// Критерии оценки
 const CRITERIA = {
   completeness: { label: 'Полнота MVP', defaultWeight: 20 },
   autoChecksQuality: { label: 'Качество автопроверок', defaultWeight: 15 },
@@ -31,7 +31,7 @@ export default function JuryPanel() {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [loadingTeams, setLoadingTeams] = useState(true);
 
-  // Веса (хранятся в localStorage)
+  // Веса 
   const [weights, setWeights] = useState<Record<CriteriaKey, number>>(() => {
     const saved = localStorage.getItem('jury_weights');
     if (saved) {
