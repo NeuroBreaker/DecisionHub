@@ -6,7 +6,7 @@
 
 ---
 
-![Лидерборд](docs/leaderboard.png)
+<img width="1349" height="661" alt="таблица" src="https://github.com/user-attachments/assets/7b7a2778-e14a-415d-bdf7-546cd9a9d3c9" />
 
 ---
 
