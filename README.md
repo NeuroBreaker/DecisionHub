@@ -6,7 +6,7 @@
 
 ---
 
-<img width="1349" height="661" alt="таблица" src="https://github.com/user-attachments/assets/7b7a2778-e14a-415d-bdf7-546cd9a9d3c9" />
+<img width="1324" height="634" alt="таблица" src="https://github.com/user-attachments/assets/39f485e3-3747-400c-983a-c60e722562f3" />
 
 ---
 
